@@ -1,0 +1,10 @@
+nohup: ignoring input
+
+> foodapp@0.1.0 start
+> next start
+
+▲ Next.js 16.2.6
+- Local:         http://localhost:3000
+- Network:       http://192.168.1.7:3000
+✓ Ready in 122ms
+⚠ "next start" does not work with "output: standalone" configuration. Use "node .next/standalone/server.js" instead.

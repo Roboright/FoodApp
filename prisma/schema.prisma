@@ -1,0 +1,402 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Profiles ────────────────────────────────────────────────────────────────
+
+model Profile {
+  id   String      @id @default(cuid())
+  name String      @unique
+  goal ProfileGoal
+
+  weightKg      Float?
+  heightCm      Float?
+  age           Int?
+  sex           Sex?
+  activityLevel ActivityLevel?
+
+  calorieTarget Int?
+  proteinTarget Int?
+  carbTarget    Int?
+  fatTarget     Int?
+  proteinCapG   Int?
+  sugarTarget   Int?
+
+  notes String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  mealSlotProfiles MealSlotProfile[]
+  mealLogs         MealLog[]
+  weightEntries    WeightEntry[]
+  conversations    Conversation[]
+}
+
+enum ProfileGoal {
+  RECOMPOSITION
+  WEIGHT_LOSS
+  MAINTENANCE
+}
+
+enum Sex {
+  MALE
+  FEMALE
+}
+
+enum ActivityLevel {
+  SEDENTARY
+  LIGHTLY_ACTIVE
+  MODERATELY_ACTIVE
+  VERY_ACTIVE
+  EXTREMELY_ACTIVE
+}
+
+// ─── Ingredients ─────────────────────────────────────────────────────────────
+
+model Ingredient {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  defaultUnit String  @default("g")
+  category    String?
+
+  createdAt DateTime @default(now())
+
+  recipeIngredients RecipeIngredient[]
+  pantryItem        PantryItem?
+  shoppingItems     ShoppingItem[]
+}
+
+// ─── Recipes ─────────────────────────────────────────────────────────────────
+
+model Recipe {
+  id              String     @id @default(cuid())
+  title           String
+  description     String?
+  servings        Int        @default(2)
+  prepMinutes     Int?
+  cookMinutes     Int?
+  instructions    String
+  tags            String[]
+  audienceKey     String?
+  sourceType      SourceType @default(AI_GENERATED)
+  aiPromptSummary String?
+  starred         Boolean    @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  nutrition         NutritionInfo?
+  recipeIngredients RecipeIngredient[]
+  mealSlots         MealSlot[]
+  mealLogs          MealLog[]
+  suggestions       RecipeSuggestion[]
+}
+
+enum SourceType {
+  AI_GENERATED
+  MANUAL
+}
+
+model RecipeIngredient {
+  id           String  @id @default(cuid())
+  recipeId     String
+  ingredientId String
+  quantity     Float
+  unit         String
+  notes        String?
+  order        Int     @default(0)
+
+  canonicalQuantity Float?
+  canonicalUnit     String?
+
+  recipe     Recipe     @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id])
+
+  @@unique([recipeId, ingredientId])
+}
+
+model NutritionInfo {
+  id       String          @id @default(cuid())
+  recipeId String          @unique
+  source   NutritionSource @default(AI_ESTIMATED)
+
+  calories Float
+  proteinG Float
+  carbG    Float
+  fatG     Float
+  fiberG   Float?
+  sugarG   Float?
+  sodiumMg Float?
+
+  confidenceNote String?
+  updatedAt      DateTime @updatedAt
+
+  recipe Recipe @relation(fields: [recipeId], references: [id], onDelete: Cascade)
+}
+
+enum NutritionSource {
+  AI_ESTIMATED
+  MANUAL
+}
+
+// ─── Meal Planning ────────────────────────────────────────────────────────────
+
+model MealPlan {
+  id            String         @id @default(cuid())
+  weekStartDate DateTime       @db.Date
+  status        MealPlanStatus @default(DRAFT)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  mealSlots     MealSlot[]
+  shoppingLists ShoppingList[]
+  conversations Conversation[]
+
+  @@unique([weekStartDate])
+}
+
+enum MealPlanStatus {
+  DRAFT
+  ACTIVE
+  ARCHIVED
+}
+
+model MealSlot {
+  id               String   @id @default(cuid())
+  mealPlanId       String
+  date             DateTime @db.Date
+  mealType         MealType
+  recipeId         String?
+  servingsOverride Float?
+  notes            String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  mealPlan MealPlan          @relation(fields: [mealPlanId], references: [id], onDelete: Cascade)
+  recipe   Recipe?           @relation(fields: [recipeId], references: [id])
+  profiles MealSlotProfile[]
+  logs     MealLog[]
+
+  @@unique([mealPlanId, date, mealType])
+}
+
+enum MealType {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SNACK_1
+  SNACK_2
+}
+
+model MealSlotProfile {
+  id              String  @id @default(cuid())
+  mealSlotId      String
+  profileId       String
+  servingFraction Float   @default(1.0)
+
+  // AI-generated personalized portion guidance for this person's plate of this
+  // specific meal — set when the recipe was generated with joint context. Falls
+  // back to scaledNutrition() math when absent (e.g. manually-assigned recipes).
+  portionNote String?
+  calories    Float?
+  proteinG    Float?
+  carbG       Float?
+  fatG        Float?
+
+  mealSlot MealSlot @relation(fields: [mealSlotId], references: [id], onDelete: Cascade)
+  profile  Profile  @relation(fields: [profileId], references: [id])
+
+  @@unique([mealSlotId, profileId])
+}
+
+// ─── Meal Logging ─────────────────────────────────────────────────────────────
+
+model MealLog {
+  id         String      @id @default(cuid())
+  mealSlotId String?
+  profileId  String
+  loggedAt   DateTime    @default(now())
+  logType    MealLogType
+
+  recipeId         String?
+  servingsConsumed Float?
+  description      String?
+  caloriesOverride Float?
+  proteinOverride  Float?
+  carbOverride     Float?
+  fatOverride      Float?
+  sugarOverride    Float?
+  notes            String?
+
+  mealSlot MealSlot? @relation(fields: [mealSlotId], references: [id])
+  profile  Profile   @relation(fields: [profileId], references: [id])
+  recipe   Recipe?   @relation(fields: [recipeId], references: [id])
+}
+
+enum MealLogType {
+  AS_PLANNED
+  MODIFIED
+  SKIPPED
+  AD_HOC
+}
+
+// ─── Weight Tracking ──────────────────────────────────────────────────────────
+
+model WeightEntry {
+  id        String   @id @default(cuid())
+  profileId String
+  date      DateTime @db.Date
+  weightKg  Float
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@unique([profileId, date])
+}
+
+// ─── Shopping & Pantry ────────────────────────────────────────────────────────
+
+model ShoppingList {
+  id         String             @id @default(cuid())
+  mealPlanId String?
+  title      String
+  status     ShoppingListStatus @default(ACTIVE)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  mealPlan MealPlan?      @relation(fields: [mealPlanId], references: [id])
+  items    ShoppingItem[]
+}
+
+enum ShoppingListStatus {
+  ACTIVE
+  ARCHIVED
+}
+
+model ShoppingItem {
+  id              String   @id @default(cuid())
+  shoppingListId  String
+  ingredientId    String?
+  name            String
+  quantity        Float?
+  unit            String?
+  category        String?
+  isBought        Boolean  @default(false)
+  boughtAt        DateTime?
+  notes           String?
+  isLikelyInStock Boolean  @default(false)
+  order           Int      @default(0)
+
+  createdAt DateTime @default(now())
+
+  shoppingList ShoppingList @relation(fields: [shoppingListId], references: [id], onDelete: Cascade)
+  ingredient   Ingredient?  @relation(fields: [ingredientId], references: [id])
+}
+
+model PantryItem {
+  id                      String   @id @default(cuid())
+  ingredientId            String   @unique
+  quantity                Float
+  unit                    String
+  packageSize             Float?
+  packageUnit             String?
+  packageSizeLearnedCount Int      @default(0)
+  location                String?
+  lastRestockedAt         DateTime?
+  updatedAt               DateTime @updatedAt
+
+  ingredient Ingredient @relation(fields: [ingredientId], references: [id])
+}
+
+// ─── Food Items ───────────────────────────────────────────────────────────────
+
+model FoodItem {
+  id       String         @id @default(cuid())
+  name     String         @unique
+  brand    String?
+  unit     String         // "g", "ml", "pcs"
+  quantity Float          // reference quantity (e.g. 100 for per-100g, 1 for per-piece)
+  calories Float
+  proteinG Float
+  carbG    Float
+  fatG     Float
+  sugarG   Float?
+  fiberG   Float?
+  source   FoodItemSource @default(MANUAL)
+  notes    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+enum FoodItemSource {
+  MANUAL
+  AI_ESTIMATED
+}
+
+// ─── AI Conversations ─────────────────────────────────────────────────────────
+
+model Conversation {
+  id         String              @id @default(cuid())
+  title      String?
+  context    ConversationContext @default(GENERAL)
+  mealPlanId String?
+  profileId  String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  mealPlan    MealPlan?             @relation(fields: [mealPlanId], references: [id])
+  profile     Profile?              @relation(fields: [profileId], references: [id])
+  messages    ConversationMessage[]
+  suggestions RecipeSuggestion[]
+}
+
+enum ConversationContext {
+  GENERAL
+  MEAL_PLAN
+  RECIPE_SEARCH
+  NUTRITION_ADVICE
+}
+
+model ConversationMessage {
+  id             String      @id @default(cuid())
+  conversationId String
+  role           MessageRole
+  content        String
+  tokensUsed     Int?
+  model          String?
+
+  createdAt DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+}
+
+model RecipeSuggestion {
+  id             String    @id @default(cuid())
+  conversationId String
+  recipeId       String?
+  suggestedTitle String
+  suggestedAt    DateTime  @default(now())
+  wasAccepted    Boolean   @default(false)
+  mealType       MealType?
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  recipe       Recipe?      @relation(fields: [recipeId], references: [id])
+}

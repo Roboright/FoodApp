@@ -1,0 +1,12 @@
+{
+  # Remove this block to enable Let's Encrypt for a real domain
+  local_certs
+}
+
+:443 {
+  reverse_proxy app:3000
+}
+
+:80 {
+  redir https://{host}{uri} permanent
+}

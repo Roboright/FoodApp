@@ -1,0 +1,6 @@
+-- AlterTable
+ALTER TABLE "MealSlotProfile" ADD COLUMN     "calories" DOUBLE PRECISION,
+ADD COLUMN     "carbG" DOUBLE PRECISION,
+ADD COLUMN     "fatG" DOUBLE PRECISION,
+ADD COLUMN     "portionNote" TEXT,
+ADD COLUMN     "proteinG" DOUBLE PRECISION;

@@ -1,0 +1,18 @@
+[Unit]
+Description=FoodApp Next.js server
+After=network.target
+
+[Service]
+Type=simple
+User=robrecht
+WorkingDirectory=/home/robrecht/code/FoodApp/.next/standalone
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=HOSTNAME=127.0.0.1
+EnvironmentFile=/home/robrecht/code/FoodApp/.env
+ExecStart=/usr/bin/node server.js
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
