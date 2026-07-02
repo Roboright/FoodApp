@@ -58,7 +58,8 @@
       "Bash(journalctl -u foodapp -n 50 --no-pager)",
       "Bash(chmod +x *)",
       "Bash(npx tsx *)",
-      "Bash(ps -p 341826 -o pid,ppid,cmd,lstart)"
+      "Bash(ps -p 341826 -o pid,ppid,cmd,lstart)",
+      "Bash(git *)"
     ]
   }
 }
