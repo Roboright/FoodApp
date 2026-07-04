@@ -172,9 +172,10 @@ export async function GET(req: Request) {
   for (const slot of plan.mealSlots) {
     if (!slot.recipe || slot.profiles.length === 0) continue
 
-    const scale = slot.servingsOverride != null
-      ? slot.servingsOverride / slot.recipe.servings
-      : 1
+    // Scale to the number of people actually eating. Use quantityPerServing when
+    // available (new recipes); fall back to quantity / servings for old recipes.
+    const numAttendees = slot.profiles.length
+    const scale = numAttendees / slot.recipe.servings
 
     for (const ri of slot.recipe.recipeIngredients) {
       const name = ri.ingredient.name

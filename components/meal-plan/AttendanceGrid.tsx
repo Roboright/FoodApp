@@ -23,6 +23,7 @@ type AttendanceGridProps = {
     recipeId?: string | null
     profiles: Array<{ profile: { id: string } }>
   }>
+  onRefresh?: () => void
 }
 
 // One color per profile, cycling if there are more than 4
@@ -45,7 +46,7 @@ function slotKey(date: string, mealType: MealType) {
   return `${date}:${mealType}`
 }
 
-export function AttendanceGrid({ planId, monday, profiles, slots }: AttendanceGridProps) {
+export function AttendanceGrid({ planId, monday, profiles, slots, onRefresh }: AttendanceGridProps) {
   const days = getWeekDates(monday)
 
   const [gridState, setGridState] = useState<Record<string, SlotInfo>>(() => {
@@ -97,6 +98,7 @@ export function AttendanceGrid({ planId, monday, profiles, slots }: AttendanceGr
         [key]: { slotId: slot.id, attendeeIds: nextIds },
       }))
     }
+    onRefresh?.()
   }
 
   const todayStr = toDateString(new Date())

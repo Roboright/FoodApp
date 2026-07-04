@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useRef, useState } from "react"
 import { Button } from "@/components/ui/button"
 import { AttendanceGrid } from "@/components/meal-plan/AttendanceGrid"
 import { getMondayOfWeek, formatWeekLabel, formatWeekRelativeLabel, toDateString } from "@/lib/week"
@@ -58,16 +58,26 @@ export default function HomePage() {
   const [fetchVersion, setFetchVersion] = useState(0)
   const [genProgress, setGenProgress] = useState<{ done: number; total: number } | null>(null)
 
+  // Tracks whether the next fetchVersion increment is a silent background sync
+  // (slot toggle) rather than a visible navigation fetch.
+  const silentRef = useRef(false)
+
   const refresh = useCallback(() => setFetchVersion((v) => v + 1), [])
+  const silentRefresh = useCallback(() => {
+    silentRef.current = true
+    setFetchVersion((v) => v + 1)
+  }, [])
 
   useEffect(() => {
     if (loading) return
     let cancelled = false
     const mondayStr = toDateString(monday)
+    const silent = silentRef.current
+    silentRef.current = false
 
     Promise.resolve().then(async () => {
       if (cancelled) return
-      setFetching(true)
+      if (!silent) setFetching(true)
       const res = await fetch("/api/meal-plans")
       const plans: MealPlan[] = await res.json()
       const existing = plans.find((p) => p.weekStartDate.startsWith(mondayStr))
@@ -78,7 +88,7 @@ export default function HomePage() {
       } else {
         setPlan(null)
       }
-      if (!cancelled) setFetching(false)
+      if (!cancelled && !silent) setFetching(false)
     })
 
     return () => { cancelled = true }
@@ -182,6 +192,7 @@ export default function HomePage() {
             monday={monday}
             profiles={profiles}
             slots={plan.mealSlots}
+            onRefresh={silentRefresh}
           />
           <div className="flex justify-center pt-4">
             <Button

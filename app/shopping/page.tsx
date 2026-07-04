@@ -39,7 +39,11 @@ function buildCopyText(categories: Category[]): string {
 }
 
 export default function ShoppingPage() {
-  const [monday, setMonday] = useState(() => getMondayOfWeek(new Date()))
+  const [monday, setMonday] = useState(() => {
+    const nextWeek = new Date()
+    nextWeek.setDate(nextWeek.getDate() + 7)
+    return getMondayOfWeek(nextWeek)
+  })
   const [categories, setCategories] = useState<Category[]>([])
   const [loading, setLoading] = useState(true)
   const [copied, setCopied] = useState(false)

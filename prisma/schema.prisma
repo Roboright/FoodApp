@@ -82,6 +82,7 @@ model Recipe {
   cookMinutes     Int?
   instructions    String
   tags            String[]
+  mealTypes       String[]  @default([])
   audienceKey     String?
   sourceType      SourceType @default(AI_GENERATED)
   aiPromptSummary String?
@@ -110,6 +111,10 @@ model RecipeIngredient {
   unit         String
   notes        String?
   order        Int     @default(0)
+
+  // Per-serving quantity (quantity / recipe.servings). Null on old records — fall
+  // back to quantity / recipe.servings when absent.
+  quantityPerServing Float?
 
   canonicalQuantity Float?
   canonicalUnit     String?

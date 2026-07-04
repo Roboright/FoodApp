@@ -59,7 +59,17 @@
       "Bash(chmod +x *)",
       "Bash(npx tsx *)",
       "Bash(ps -p 341826 -o pid,ppid,cmd,lstart)",
-      "Bash(git *)"
+      "Bash(git *)",
+      "Bash(sudo systemctl restart foodapp)",
+      "Bash(journalctl *)",
+      "Bash(systemctl --user list-units)",
+      "Bash(cp -r /home/robrecht/code/FoodApp/.next/static /home/robrecht/code/FoodApp/.next/standalone/.next/static)",
+      "Bash(cp -r /home/robrecht/code/FoodApp/public /home/robrecht/code/FoodApp/.next/standalone/public)",
+      "Bash(./deploy.sh *)",
+      "Bash(xargs ls)",
+      "Bash(xargs cat)",
+      "Bash(sudo systemctl is-active foodapp)",
+      "Bash(grep -E \"^sharp$|^canvas$|^jimp$\")"
     ]
   }
 }

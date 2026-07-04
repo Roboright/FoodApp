@@ -103,14 +103,15 @@ export async function POST(req: Request) {
     })
     const recentlyServedIds = [...new Set(recentlyServed.map((s) => s.recipeId!))]
 
-    // Only recipes previously served for this exact meal type are proven to fit the slot
-    // (e.g. don't reuse a dinner recipe for breakfast).
+    // Any recipe tagged for this meal type that hasn't appeared in the plan within
+    // the cooldown window. No audience restriction — a 2-person recipe can be reused
+    // for 1 person by eating 1 of its 2 servings; quantities scale via servings.
+    const recipeType = mealType === "SNACK_1" || mealType === "SNACK_2" ? "SNACK" : mealType as string
     const reusable = await db.recipe.findMany({
       where: {
         id: { notIn: recentlyServedIds },
         nutrition: { isNot: null },
-        audienceKey,
-        mealSlots: { some: { mealType: mealType as MealType } },
+        mealTypes: { has: recipeType },
       },
       include: { nutrition: true },
     })
@@ -121,13 +122,25 @@ export async function POST(req: Request) {
       const pool = starred.length > 0 ? starred : reusable
       const recipe = pool[Math.floor(Math.random() * pool.length)]
 
+      let targetSlotId: string | null = slotId ?? null
       if (slotId) {
         await db.mealSlot.update({ where: { id: slotId }, data: { recipeId: recipe.id } })
+        targetSlotId = slotId
       } else if (mealPlanId) {
-        await db.mealSlot.upsert({
+        const slot = await db.mealSlot.upsert({
           where: { mealPlanId_date_mealType: { mealPlanId, date: dateObj, mealType: mealType as MealType } },
           create: { mealPlanId, date: dateObj, mealType: mealType as MealType, recipeId: recipe.id },
           update: { recipeId: recipe.id },
+        })
+        targetSlotId = slot.id
+      }
+
+      // Clear stale per-person nutrition so the UI falls back to scaledNutrition(),
+      // which correctly divides total nutrition by recipe.servings per attendee.
+      if (targetSlotId) {
+        await db.mealSlotProfile.updateMany({
+          where: { mealSlotId: targetSlotId },
+          data: { portionNote: null, calories: null, proteinG: null, carbG: null, fatG: null },
         })
       }
 
@@ -249,6 +262,7 @@ Design one shared dish. Then, for each person listed above, describe their speci
       cookMinutes: object.cookMinutes,
       instructions: object.instructions,
       tags: object.tags,
+      mealTypes: [mealType === "SNACK_1" || mealType === "SNACK_2" ? "SNACK" : mealType],
       audienceKey,
       sourceType: "AI_GENERATED",
       aiPromptSummary: userPrompt ?? null,
@@ -284,6 +298,7 @@ Design one shared dish. Then, for each person listed above, describe their speci
         unit: ing.unit,
         notes: ing.notes ?? null,
         order: i,
+        quantityPerServing: ing.quantity / object.servings,
       },
     })
   }

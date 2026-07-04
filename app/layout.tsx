@@ -10,7 +10,14 @@ const geist = Geist({ subsets: ["latin"], variable: "--font-geist-sans" })
 export const metadata: Metadata = {
   title: "FoodPlanner",
   description: "Personal meal planner for Rob & Steph",
-  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    title: "FoodPlanner",
+    statusBarStyle: "default",
+  },
+  icons: {
+    apple: [{ url: "/foodapp/apple-touch-icon.png", sizes: "180x180", type: "image/png" }],
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

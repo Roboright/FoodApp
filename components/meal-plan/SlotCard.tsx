@@ -22,11 +22,20 @@ const MEAL_BORDER: Record<MealType, string> = {
   SNACK_2:   "border-l-rose-400",
 }
 
+const SLOT_TO_RECIPE_TYPE: Record<string, string> = {
+  BREAKFAST: "BREAKFAST",
+  LUNCH: "LUNCH",
+  DINNER: "DINNER",
+  SNACK_1: "SNACK",
+  SNACK_2: "SNACK",
+}
+
 type Recipe = {
   id: string
   title: string
   servings: number
   starred: boolean
+  mealTypes: string[]
   nutrition: { calories: number; proteinG: number; carbG: number; fatG: number; sugarG?: number | null } | null
 }
 
@@ -134,7 +143,8 @@ export function SlotCard({
     setGenerateError("")
     if (recipes.length === 0) {
       setLoadingRecipes(true)
-      const res = await fetch("/api/recipes")
+      const recipeType = SLOT_TO_RECIPE_TYPE[mealType]
+      const res = await fetch(`/api/recipes?mealType=${recipeType}`)
       setRecipes(await res.json())
       setLoadingRecipes(false)
     }
@@ -174,7 +184,7 @@ export function SlotCard({
       {
         method: slotId ? "PATCH" : "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ date, mealType, recipeId, profileIds: selectedAttendees }),
+        body: JSON.stringify(slotId ? { recipeId, profileIds: selectedAttendees } : { date, mealType, recipeId, profileIds: selectedAttendees }),
       }
     )
     setOpen(false)
@@ -278,7 +288,7 @@ export function SlotCard({
         )}
       </div>
 
-      <DialogContent className="max-w-sm">
+      <DialogContent className="w-[calc(100vw-2rem)] max-w-sm">
         <DialogHeader>
           <DialogTitle>Assign recipe</DialogTitle>
         </DialogHeader>
@@ -328,7 +338,7 @@ export function SlotCard({
               >
                 <span className="flex items-center gap-1.5 min-w-0">
                   {r.starred && <span className="text-amber-400 shrink-0">★</span>}
-                  <span className="truncate">{r.title}</span>
+                  <span className="truncate min-w-0">{r.title}</span>
                 </span>
                 {r.nutrition && (
                   <span className="text-xs text-muted-foreground shrink-0">

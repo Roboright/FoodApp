@@ -12,6 +12,7 @@ type Recipe = {
   title: string
   servings: number
   starred: boolean
+  mealTypes: string[]
   nutrition: { calories: number; proteinG: number; carbG: number; fatG: number; sugarG?: number | null } | null
 }
 

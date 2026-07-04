@@ -5,11 +5,13 @@ export async function GET(req: Request) {
   const { searchParams } = new URL(req.url)
   const search = searchParams.get("search")
   const tag = searchParams.get("tag")
+  const mealType = searchParams.get("mealType")
 
   const recipes = await db.recipe.findMany({
     where: {
       ...(search ? { title: { contains: search, mode: "insensitive" } } : {}),
       ...(tag ? { tags: { has: tag } } : {}),
+      ...(mealType ? { mealTypes: { has: mealType } } : {}),
     },
     include: { nutrition: true },
     orderBy: { createdAt: "desc" },

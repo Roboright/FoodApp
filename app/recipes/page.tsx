@@ -14,6 +14,15 @@ import { Separator } from "@/components/ui/separator"
 import { formatCalories, formatMacro } from "@/lib/nutrition"
 import { cn } from "@/lib/utils"
 
+const MEAL_TYPE_LABELS: Record<string, string> = {
+  BREAKFAST: "Breakfast",
+  LUNCH: "Lunch",
+  DINNER: "Dinner",
+  SNACK: "Snack",
+}
+const MEAL_TYPE_KEYS = ["BREAKFAST", "LUNCH", "DINNER", "SNACK"] as const
+type RecipeMealType = typeof MEAL_TYPE_KEYS[number]
+
 type Recipe = {
   id: string
   title: string
@@ -22,6 +31,7 @@ type Recipe = {
   prepMinutes: number | null
   cookMinutes: number | null
   tags: string[]
+  mealTypes: string[]
   starred: boolean
   nutrition: { calories: number; proteinG: number; carbG: number; fatG: number } | null
 }
@@ -60,6 +70,7 @@ export default function RecipesPage() {
   const [recipes, setRecipes] = useState<Recipe[]>([])
   const [search, setSearch] = useState("")
   const [starFilter, setStarFilter] = useState(false)
+  const [mealTypeFilter, setMealTypeFilter] = useState<RecipeMealType | null>(null)
   const [addOpen, setAddOpen] = useState(false)
   const [form, setForm] = useState(emptyForm())
   const [saving, setSaving] = useState(false)
@@ -70,11 +81,14 @@ export default function RecipesPage() {
   const [starring, setStarring] = useState(false)
 
   const fetchRecipes = async () => {
-    const res = await fetch(`/api/recipes${search ? `?search=${encodeURIComponent(search)}` : ""}`)
+    const params = new URLSearchParams()
+    if (search) params.set("search", search)
+    if (mealTypeFilter) params.set("mealType", mealTypeFilter)
+    const res = await fetch(`/api/recipes${params.size ? `?${params}` : ""}`)
     setRecipes(await res.json())
   }
 
-  useEffect(() => { fetchRecipes() }, [search])
+  useEffect(() => { fetchRecipes() }, [search, mealTypeFilter])
 
   const openDetail = async (recipe: Recipe) => {
     setDetailOpen(true)
@@ -138,7 +152,21 @@ export default function RecipesPage() {
     setStarring(false)
   }
 
-  const displayed = starFilter ? recipes.filter((r) => r.starred) : recipes
+  const baseList = starFilter ? recipes.filter((r) => r.starred) : recipes
+
+  // When no meal type filter: group by meal type (uncategorized at the end)
+  const groups: { label: string; items: Recipe[] }[] = mealTypeFilter
+    ? [{ label: MEAL_TYPE_LABELS[mealTypeFilter], items: baseList }]
+    : (() => {
+        const result: { label: string; items: Recipe[] }[] = []
+        for (const key of MEAL_TYPE_KEYS) {
+          const items = baseList.filter((r) => r.mealTypes.includes(key))
+          if (items.length) result.push({ label: MEAL_TYPE_LABELS[key], items })
+        }
+        const uncategorized = baseList.filter((r) => r.mealTypes.length === 0)
+        if (uncategorized.length) result.push({ label: "Uncategorized", items: uncategorized })
+        return result
+      })()
 
   return (
     <div className="space-y-4">
@@ -220,46 +248,85 @@ export default function RecipesPage() {
         </button>
       </div>
 
-      {/* Recipe grid */}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {displayed.map((r) => (
-          <Card
-            key={r.id}
-            className="cursor-pointer hover:border-primary/50 transition-colors"
-            onClick={() => openDetail(r)}
+      {/* Meal type filter chips */}
+      <div className="flex gap-2 flex-wrap">
+        <button
+          onClick={() => setMealTypeFilter(null)}
+          className={cn(
+            "rounded-full px-3 py-1 text-xs font-medium transition-colors border",
+            mealTypeFilter === null
+              ? "bg-primary text-primary-foreground border-primary"
+              : "border-border text-muted-foreground hover:border-primary/50"
+          )}
+        >
+          All
+        </button>
+        {MEAL_TYPE_KEYS.map((key) => (
+          <button
+            key={key}
+            onClick={() => setMealTypeFilter(mealTypeFilter === key ? null : key)}
+            className={cn(
+              "rounded-full px-3 py-1 text-xs font-medium transition-colors border",
+              mealTypeFilter === key
+                ? "bg-primary text-primary-foreground border-primary"
+                : "border-border text-muted-foreground hover:border-primary/50"
+            )}
           >
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium leading-snug flex items-start justify-between gap-1">
-                <span>{r.title}</span>
-                {r.starred && <span className="text-amber-400 shrink-0 leading-none">★</span>}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              {r.nutrition && (
-                <div className="flex flex-wrap gap-1">
-                  <Badge variant="outline" className="text-xs">{formatCalories(r.nutrition.calories / r.servings)}/srv</Badge>
-                  <Badge variant="outline" className="text-xs text-blue-600">P {formatMacro(r.nutrition.proteinG / r.servings)}</Badge>
-                  <Badge variant="outline" className="text-xs text-yellow-600">C {formatMacro(r.nutrition.carbG / r.servings)}</Badge>
-                  <Badge variant="outline" className="text-xs text-purple-600">F {formatMacro(r.nutrition.fatG / r.servings)}</Badge>
-                </div>
-              )}
-              <div className="flex flex-wrap gap-1">
-                {r.tags.map((t) => <Badge key={t} variant="secondary" className="text-xs">{t}</Badge>)}
-              </div>
-              {(r.prepMinutes || r.cookMinutes) && (
-                <p className="text-xs text-muted-foreground">
-                  {[r.prepMinutes && `${r.prepMinutes}m prep`, r.cookMinutes && `${r.cookMinutes}m cook`].filter(Boolean).join(" · ")}
-                </p>
-              )}
-            </CardContent>
-          </Card>
+            {MEAL_TYPE_LABELS[key]}
+          </button>
         ))}
-        {displayed.length === 0 && (
-          <p className="text-sm text-muted-foreground col-span-full py-8 text-center">
-            {starFilter ? "No starred recipes yet." : "No recipes yet. Add your first one!"}
-          </p>
-        )}
       </div>
+
+      {/* Recipe grid — grouped when no filter active */}
+      {groups.length === 0 ? (
+        <p className="text-sm text-muted-foreground py-8 text-center">
+          {starFilter ? "No starred recipes yet." : "No recipes yet. Add your first one!"}
+        </p>
+      ) : (
+        <div className="space-y-6">
+          {groups.map(({ label, items }) => (
+            <div key={label} className="space-y-3">
+              {!mealTypeFilter && (
+                <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">{label}</h2>
+              )}
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {items.map((r) => (
+                  <Card
+                    key={r.id}
+                    className="cursor-pointer hover:border-primary/50 transition-colors"
+                    onClick={() => openDetail(r)}
+                  >
+                    <CardHeader className="pb-2">
+                      <CardTitle className="text-sm font-medium leading-snug flex items-start justify-between gap-1">
+                        <span>{r.title}</span>
+                        {r.starred && <span className="text-amber-400 shrink-0 leading-none">★</span>}
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-2">
+                      {r.nutrition && (
+                        <div className="flex flex-wrap gap-1">
+                          <Badge variant="outline" className="text-xs">{formatCalories(r.nutrition.calories / r.servings)}/srv</Badge>
+                          <Badge variant="outline" className="text-xs text-blue-600">P {formatMacro(r.nutrition.proteinG / r.servings)}</Badge>
+                          <Badge variant="outline" className="text-xs text-yellow-600">C {formatMacro(r.nutrition.carbG / r.servings)}</Badge>
+                          <Badge variant="outline" className="text-xs text-purple-600">F {formatMacro(r.nutrition.fatG / r.servings)}</Badge>
+                        </div>
+                      )}
+                      <div className="flex flex-wrap gap-1">
+                        {r.tags.map((t) => <Badge key={t} variant="secondary" className="text-xs">{t}</Badge>)}
+                      </div>
+                      {(r.prepMinutes || r.cookMinutes) && (
+                        <p className="text-xs text-muted-foreground">
+                          {[r.prepMinutes && `${r.prepMinutes}m prep`, r.cookMinutes && `${r.cookMinutes}m cook`].filter(Boolean).join(" · ")}
+                        </p>
+                      )}
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Detail dialog — same layout as meals popup */}
       <Dialog open={detailOpen} onOpenChange={(v) => { if (!v) setDetailOpen(false) }}>

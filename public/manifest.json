@@ -1,0 +1,15 @@
+{
+  "name": "FoodPlanner",
+  "short_name": "FoodPlanner",
+  "start_url": "/foodapp",
+  "display": "standalone",
+  "background_color": "#15803d",
+  "theme_color": "#15803d",
+  "icons": [
+    {
+      "src": "/foodapp/apple-icon",
+      "sizes": "180x180",
+      "type": "image/png"
+    }
+  ]
+}
