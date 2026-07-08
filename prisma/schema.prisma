@@ -25,6 +25,7 @@ model Profile {
   fatTarget     Int?
   proteinCapG   Int?
   sugarTarget   Int?
+  fiberTarget   Int?
 
   notes String?
 
@@ -238,6 +239,7 @@ model MealLog {
   carbOverride     Float?
   fatOverride      Float?
   sugarOverride    Float?
+  fiberOverride    Float?
   notes            String?
 
   mealSlot MealSlot? @relation(fields: [mealSlotId], references: [id])

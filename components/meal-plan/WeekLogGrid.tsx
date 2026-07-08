@@ -81,6 +81,7 @@ export function WeekLogGrid({ plan, monday, profiles, eatenMap, extraLogs, onTog
           extra={detailExtra}
           onClose={() => setDetailExtra(null)}
           onDeleted={() => { setDetailExtra(null); onExtrasChanged() }}
+          onChanged={() => { setDetailExtra(null); onExtrasChanged() }}
         />
       )}
 
@@ -347,12 +348,25 @@ function ExtraDetailPopup({
   extra,
   onClose,
   onDeleted,
+  onChanged,
 }: {
   extra: ExtraLog
   onClose: () => void
   onDeleted: () => void
+  onChanged: () => void
 }) {
   const [deleting, setDeleting] = useState(false)
+  const [editing, setEditing] = useState(false)
+  const [saving, setSaving] = useState(false)
+  const [draft, setDraft] = useState({
+    description: extra.description ?? "",
+    calories: extra.caloriesOverride?.toString() ?? "",
+    protein: extra.proteinOverride?.toString() ?? "",
+    carbs: extra.carbOverride?.toString() ?? "",
+    fat: extra.fatOverride?.toString() ?? "",
+    sugar: extra.sugarOverride?.toString() ?? "",
+    fiber: extra.fiberOverride?.toString() ?? "",
+  })
 
   const del = async () => {
     setDeleting(true)
@@ -360,8 +374,44 @@ function ExtraDetailPopup({
     onDeleted()
   }
 
+  const save = async () => {
+    setSaving(true)
+    await fetch(`/api/meal-logs/${extra.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        description: draft.description || null,
+        caloriesOverride: draft.calories ? parseFloat(draft.calories) : null,
+        proteinOverride: draft.protein ? parseFloat(draft.protein) : null,
+        carbOverride: draft.carbs ? parseFloat(draft.carbs) : null,
+        fatOverride: draft.fat ? parseFloat(draft.fat) : null,
+        sugarOverride: draft.sugar ? parseFloat(draft.sugar) : null,
+        fiberOverride: draft.fiber ? parseFloat(draft.fiber) : null,
+      }),
+    })
+    setSaving(false)
+    onChanged()
+  }
+
   const date = new Date(extra.loggedAt)
   const dateLabel = date.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" })
+
+  const MacroInput = ({ k, label, unit, color }: { k: keyof typeof draft; label: string; unit: string; color: string }) => (
+    <div className="flex flex-col gap-1">
+      <label className="text-xs text-muted-foreground">{label}</label>
+      <div className="flex items-center gap-1">
+        <input
+          type="number"
+          min="0"
+          step="0.1"
+          value={draft[k]}
+          onChange={(e) => setDraft((d) => ({ ...d, [k]: e.target.value }))}
+          className="w-full rounded-lg border border-border bg-muted/30 px-2 py-1.5 text-sm tabular-nums focus:outline-none focus:ring-2 focus:ring-ring"
+        />
+        <span className={cn("text-xs shrink-0", color)}>{unit}</span>
+      </div>
+    </div>
+  )
 
   return (
     <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-3 bg-black/40" onClick={onClose}>
@@ -377,29 +427,73 @@ function ExtraDetailPopup({
           <button onClick={onClose} className="text-muted-foreground hover:text-foreground text-lg leading-none shrink-0">✕</button>
         </div>
 
-        {extra.description && (
-          <p className="text-sm leading-relaxed">{extra.description}</p>
+        {editing ? (
+          <>
+            <div>
+              <label className="text-xs text-muted-foreground font-medium">Description</label>
+              <textarea
+                value={draft.description}
+                onChange={(e) => setDraft((d) => ({ ...d, description: e.target.value }))}
+                rows={2}
+                className="mt-1 w-full rounded-xl border border-border bg-muted/30 px-3 py-2 text-sm resize-none focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <MacroInput k="calories" label="Calories" unit="kcal" color="text-orange-500" />
+              <MacroInput k="protein"  label="Protein"  unit="g"    color="text-blue-500" />
+              <MacroInput k="carbs"    label="Carbs"    unit="g"    color="text-amber-500" />
+              <MacroInput k="fat"      label="Fat"      unit="g"    color="text-rose-500" />
+              <MacroInput k="sugar"    label="Sugar"    unit="g"    color="text-pink-500" />
+              <MacroInput k="fiber"    label="Fiber"    unit="g"    color="text-green-600 dark:text-green-400" />
+            </div>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setEditing(false)}
+                className="flex-1 py-2 rounded-xl border border-border text-sm font-medium hover:bg-muted transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={save}
+                disabled={saving}
+                className="flex-1 py-2 rounded-xl bg-primary text-primary-foreground text-sm font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
+              >
+                {saving ? "Saving…" : "Save"}
+              </button>
+            </div>
+          </>
+        ) : (
+          <>
+            {extra.description && (
+              <p className="text-sm leading-relaxed">{extra.description}</p>
+            )}
+            {(extra.caloriesOverride !== null || extra.proteinOverride !== null) && (
+              <div className="grid grid-cols-3 gap-3">
+                <MacroPill label="kcal"    value={Math.round(extra.caloriesOverride ?? 0)}  color="text-orange-500" />
+                <MacroPill label="protein" value={Math.round(extra.proteinOverride  ?? 0)} unit="g" color="text-blue-500" />
+                <MacroPill label="carbs"   value={Math.round(extra.carbOverride     ?? 0)} unit="g" color="text-amber-500" />
+                <MacroPill label="fat"     value={Math.round(extra.fatOverride      ?? 0)} unit="g" color="text-rose-500" />
+                <MacroPill label="sugar"   value={Math.round(extra.sugarOverride    ?? 0)} unit="g" color="text-pink-500" />
+                <MacroPill label="fiber"   value={Math.round(extra.fiberOverride    ?? 0)} unit="g" color="text-green-600 dark:text-green-400" />
+              </div>
+            )}
+            <div className="flex items-center justify-between pt-1">
+              <button
+                onClick={del}
+                disabled={deleting}
+                className="text-sm text-destructive hover:underline disabled:opacity-50"
+              >
+                {deleting ? "Deleting…" : "Delete this entry"}
+              </button>
+              <button
+                onClick={() => setEditing(true)}
+                className="text-sm text-muted-foreground hover:text-foreground"
+              >
+                Edit values
+              </button>
+            </div>
+          </>
         )}
-
-        {(extra.caloriesOverride !== null || extra.proteinOverride !== null) && (
-          <div className="grid grid-cols-5 gap-3">
-            <MacroPill label="kcal" value={Math.round(extra.caloriesOverride ?? 0)} color="text-orange-500" />
-            <MacroPill label="protein" value={Math.round(extra.proteinOverride ?? 0)} unit="g" color="text-blue-500" />
-            <MacroPill label="carbs" value={Math.round(extra.carbOverride ?? 0)} unit="g" color="text-amber-500" />
-            <MacroPill label="fat" value={Math.round(extra.fatOverride ?? 0)} unit="g" color="text-rose-500" />
-            <MacroPill label="sugar" value={Math.round(extra.sugarOverride ?? 0)} unit="g" color="text-pink-500" />
-          </div>
-        )}
-
-        <div className="flex justify-end pt-1">
-          <button
-            onClick={del}
-            disabled={deleting}
-            className="text-sm text-destructive hover:underline disabled:opacity-50"
-          >
-            {deleting ? "Deleting…" : "Delete this entry"}
-          </button>
-        </div>
       </div>
     </div>
   )

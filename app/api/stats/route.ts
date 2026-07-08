@@ -19,7 +19,7 @@ export async function GET(req: Request) {
     db.profile.findMany({
       select: {
         id: true, name: true,
-        calorieTarget: true, proteinTarget: true, carbTarget: true, fatTarget: true, sugarTarget: true,
+        calorieTarget: true, proteinTarget: true, carbTarget: true, fatTarget: true, sugarTarget: true, fiberTarget: true,
       },
     }),
     db.weightEntry.findMany({ where: { date: { gte: rangeStart, lt: rangeEnd } } }),
@@ -38,10 +38,9 @@ export async function GET(req: Request) {
       where: { logType: "AD_HOC", loggedAt: { gte: rangeStart, lt: rangeEnd } },
       select: {
         profileId: true, loggedAt: true,
-        caloriesOverride: true, proteinOverride: true, carbOverride: true, fatOverride: true, sugarOverride: true,
+        caloriesOverride: true, proteinOverride: true, carbOverride: true, fatOverride: true, sugarOverride: true, fiberOverride: true,
       },
     }),
-    // Logs for planned meals that were actually eaten (AS_PLANNED or MODIFIED)
     db.mealLog.findMany({
       where: {
         logType: { in: ["AS_PLANNED", "MODIFIED"] },
@@ -52,7 +51,6 @@ export async function GET(req: Request) {
     }),
   ])
 
-  // Build a Set of "slotId:profileId" pairs that were actually eaten
   const eatenSet = new Set(eatenLogs.map((l) => `${l.mealSlotId}:${l.profileId}`))
 
   const weeks = []
@@ -100,15 +98,13 @@ export async function GET(req: Request) {
 
       // ── Nutrition from meal plan ─────────────────────────────────────────────
       const slots = plan?.mealSlots ?? []
-      let totalCals = 0, totalProt = 0, totalCarb = 0, totalFat = 0, totalSugar = 0
+      let totalCals = 0, totalProt = 0, totalCarb = 0, totalFat = 0, totalSugar = 0, totalFiber = 0
       let hasNutrition = false
 
       for (const slot of slots) {
         const sp = slot.profiles.find((p) => p.profileId === profile.id)
         if (!sp) continue
 
-        // For past/current weeks, only count slots the person actually logged as eaten.
-        // For future weeks, use the full plan as a projection.
         if (!isFutureWeek && !eatenSet.has(`${slot.id}:${profile.id}`)) continue
 
         const nut = slot.recipe?.nutrition
@@ -119,12 +115,14 @@ export async function GET(req: Request) {
         const carb = sp.carbG ?? (nut ? nut.carbG / servings * sp.servingFraction : null)
         const fat = sp.fatG ?? (nut ? nut.fatG / servings * sp.servingFraction : null)
         const sugar = nut?.sugarG != null ? nut.sugarG / servings * sp.servingFraction : null
+        const fiber = nut?.fiberG != null ? nut.fiberG / servings * sp.servingFraction : null
 
         if (cals !== null) { totalCals += cals; hasNutrition = true }
         if (prot !== null) totalProt += prot
         if (carb !== null) totalCarb += carb
         if (fat !== null) totalFat += fat
         if (sugar !== null) totalSugar += sugar
+        if (fiber !== null) totalFiber += fiber
       }
 
       // ── Nutrition from extras ────────────────────────────────────────────────
@@ -138,6 +136,7 @@ export async function GET(req: Request) {
         totalCarb += e.carbOverride ?? 0
         totalFat += e.fatOverride ?? 0
         totalSugar += e.sugarOverride ?? 0
+        totalFiber += e.fiberOverride ?? 0
         if (e.caloriesOverride) hasNutrition = true
       }
 
@@ -154,11 +153,13 @@ export async function GET(req: Request) {
         avgCarbG: hasNutrition ? Math.round(totalCarb / daysElapsed) : null,
         avgFatG: hasNutrition ? Math.round(totalFat / daysElapsed) : null,
         avgSugarG: totalSugar > 0 ? Math.round(totalSugar / daysElapsed) : null,
+        avgFiberG: totalFiber > 0 ? Math.round(totalFiber / daysElapsed) : null,
         calorieTarget: profile.calorieTarget,
         proteinTarget: profile.proteinTarget,
         carbTarget: profile.carbTarget,
         fatTarget: profile.fatTarget,
         sugarTarget: profile.sugarTarget,
+        fiberTarget: profile.fiberTarget,
       }
     })
 

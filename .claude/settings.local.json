@@ -69,7 +69,9 @@
       "Bash(xargs ls)",
       "Bash(xargs cat)",
       "Bash(sudo systemctl is-active foodapp)",
-      "Bash(grep -E \"^sharp$|^canvas$|^jimp$\")"
+      "Bash(grep -E \"^sharp$|^canvas$|^jimp$\")",
+      "Read(//etc/nginx/conf.d/**)",
+      "Read(//etc/**)"
     ]
   }
 }

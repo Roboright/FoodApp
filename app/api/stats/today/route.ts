@@ -16,7 +16,7 @@ export async function GET() {
     db.profile.findMany({
       select: {
         id: true, name: true,
-        calorieTarget: true, proteinTarget: true, carbTarget: true, fatTarget: true, sugarTarget: true,
+        calorieTarget: true, proteinTarget: true, carbTarget: true, fatTarget: true, sugarTarget: true, fiberTarget: true,
       },
     }),
     db.weightEntry.findMany({ where: { date: { gte: today, lt: tomorrow } } }),
@@ -36,7 +36,7 @@ export async function GET() {
       where: { logType: "AD_HOC", loggedAt: { gte: today, lt: tomorrow } },
       select: {
         profileId: true,
-        caloriesOverride: true, proteinOverride: true, carbOverride: true, fatOverride: true, sugarOverride: true,
+        caloriesOverride: true, proteinOverride: true, carbOverride: true, fatOverride: true, sugarOverride: true, fiberOverride: true,
       },
     }),
     db.mealLog.findMany({
@@ -55,7 +55,7 @@ export async function GET() {
     const weightEntry = weightEntries.find((e) => e.profileId === profile.id)
 
     const slots = mealPlan?.mealSlots ?? []
-    let totalCals = 0, totalProt = 0, totalCarb = 0, totalFat = 0, totalSugar = 0
+    let totalCals = 0, totalProt = 0, totalCarb = 0, totalFat = 0, totalSugar = 0, totalFiber = 0
     let hasNutrition = false
 
     for (const slot of slots) {
@@ -71,12 +71,14 @@ export async function GET() {
       const carb = sp.carbG ?? (nut ? nut.carbG / servings * sp.servingFraction : null)
       const fat = sp.fatG ?? (nut ? nut.fatG / servings * sp.servingFraction : null)
       const sugar = nut?.sugarG != null ? nut.sugarG / servings * sp.servingFraction : null
+      const fiber = nut?.fiberG != null ? nut.fiberG / servings * sp.servingFraction : null
 
       if (cals !== null) { totalCals += cals; hasNutrition = true }
       if (prot !== null) totalProt += prot
       if (carb !== null) totalCarb += carb
       if (fat !== null) totalFat += fat
       if (sugar !== null) totalSugar += sugar
+      if (fiber !== null) totalFiber += fiber
     }
 
     for (const e of adHocLogs.filter((l) => l.profileId === profile.id)) {
@@ -85,6 +87,7 @@ export async function GET() {
       totalCarb += e.carbOverride ?? 0
       totalFat += e.fatOverride ?? 0
       totalSugar += e.sugarOverride ?? 0
+      totalFiber += e.fiberOverride ?? 0
       if (e.caloriesOverride) hasNutrition = true
     }
 
@@ -98,11 +101,13 @@ export async function GET() {
       carbG: hasNutrition ? Math.round(totalCarb) : null,
       fatG: hasNutrition ? Math.round(totalFat) : null,
       sugarG: totalSugar > 0 ? Math.round(totalSugar) : null,
+      fiberG: totalFiber > 0 ? Math.round(totalFiber) : null,
       calorieTarget: profile.calorieTarget,
       proteinTarget: profile.proteinTarget,
       carbTarget: profile.carbTarget,
       fatTarget: profile.fatTarget,
       sugarTarget: profile.sugarTarget,
+      fiberTarget: profile.fiberTarget,
     }
   })
 

@@ -60,8 +60,8 @@ export function MacroBar({ label, value, target, unit = "g" }: MacroBarProps) {
 
 type DailyNutritionBarProps = {
   profileName?: string
-  planned: { calories: number; proteinG: number; carbG: number; fatG: number; sugarG?: number | null }
-  targets: { calorieTarget: number | null; proteinTarget: number | null; carbTarget: number | null; fatTarget: number | null; proteinCapG?: number | null; sugarTarget?: number | null }
+  planned: { calories: number; proteinG: number; carbG: number; fatG: number; sugarG?: number | null; fiberG?: number | null }
+  targets: { calorieTarget: number | null; proteinTarget: number | null; carbTarget: number | null; fatTarget: number | null; proteinCapG?: number | null; sugarTarget?: number | null; fiberTarget?: number | null }
 }
 
 export function DailyNutritionBar({ profileName, planned, targets }: DailyNutritionBarProps) {
@@ -80,6 +80,9 @@ export function DailyNutritionBar({ profileName, planned, targets }: DailyNutrit
       <MacroBar label="Fat" value={planned.fatG} target={targets.fatTarget} />
       {(planned.sugarG != null || targets.sugarTarget != null) && (
         <MacroBar label="Sugar" value={planned.sugarG ?? 0} target={targets.sugarTarget ?? null} />
+      )}
+      {(planned.fiberG != null || targets.fiberTarget != null) && (
+        <MacroBar label="Fiber" value={planned.fiberG ?? 0} target={targets.fiberTarget ?? null} />
       )}
     </div>
   )

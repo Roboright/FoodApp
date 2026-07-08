@@ -15,6 +15,7 @@ export async function POST(req: Request) {
     carbOverride,
     fatOverride,
     sugarOverride,
+    fiberOverride,
     notes,
   } = body
 
@@ -34,6 +35,7 @@ export async function POST(req: Request) {
       carbOverride: carbOverride ?? null,
       fatOverride: fatOverride ?? null,
       sugarOverride: sugarOverride ?? null,
+      fiberOverride: fiberOverride ?? null,
       notes: notes ?? null,
     },
   })

@@ -21,6 +21,7 @@ type AnalysedItem = {
   carbG: number
   fatG: number
   sugarG: number
+  fiberG: number
 }
 
 type Analysis = {
@@ -31,6 +32,7 @@ type Analysis = {
     carbG: number
     fatG: number
     sugarG: number
+    fiberG: number
   }
 }
 
@@ -117,6 +119,7 @@ export function LogExtraDialog({
     return () => { document.body.style.overflow = prev }
   }, [])
 
+  const isBoth = selectedProfileId === "BOTH"
   const selectedProfile = profiles.find((p) => p.id === selectedProfileId)
   const canAnalyse = imageFile != null || text.trim().length > 0
 
@@ -196,6 +199,7 @@ export function LogExtraDialog({
       carbG: Math.round(labelData.carbG * scale * 10) / 10,
       fatG: Math.round(labelData.fatG * scale * 10) / 10,
       sugarG: Math.round((labelData.sugarG ?? 0) * scale * 10) / 10,
+      fiberG: Math.round((labelData.fiberG ?? 0) * scale * 10) / 10,
     }
     setAnalysis({
       items: [item],
@@ -205,6 +209,7 @@ export function LogExtraDialog({
         carbG: Math.round(item.carbG),
         fatG: Math.round(item.fatG),
         sugarG: Math.round(item.sugarG),
+        fiberG: Math.round(item.fiberG),
       },
     })
     setLabelData(null)
@@ -213,21 +218,27 @@ export function LogExtraDialog({
   const save = async () => {
     if (!analysis) return
     setSaving(true)
-    await fetch("/api/meal-logs", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        profileId: selectedProfileId,
-        logType: "AD_HOC",
-        loggedAt: `${selectedDate}T12:00:00.000Z`,
-        description: text || (imageFile ? "[photo]" : ""),
-        caloriesOverride: analysis.totals.calories,
-        proteinOverride: analysis.totals.proteinG,
-        carbOverride: analysis.totals.carbG,
-        fatOverride: analysis.totals.fatG,
-        sugarOverride: analysis.totals.sugarG,
-      }),
-    })
+    const profileIds = isBoth ? profiles.map((p) => p.id) : [selectedProfileId]
+    const body = {
+      logType: "AD_HOC",
+      loggedAt: `${selectedDate}T12:00:00.000Z`,
+      description: text || (imageFile ? "[photo]" : ""),
+      caloriesOverride: analysis.totals.calories,
+      proteinOverride: analysis.totals.proteinG,
+      carbOverride: analysis.totals.carbG,
+      fatOverride: analysis.totals.fatG,
+      sugarOverride: analysis.totals.sugarG,
+      fiberOverride: analysis.totals.fiberG,
+    }
+    await Promise.all(
+      profileIds.map((profileId) =>
+        fetch("/api/meal-logs", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ...body, profileId }),
+        })
+      )
+    )
     setSaving(false)
     onSaved()
   }
@@ -266,6 +277,19 @@ export function LogExtraDialog({
                 {p.name}
               </button>
             ))}
+            {profiles.length > 1 && (
+              <button
+                onClick={() => setSelectedProfileId("BOTH")}
+                className={cn(
+                  "flex-1 py-2 rounded-lg text-sm font-medium border transition-colors",
+                  isBoth
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-background text-foreground border-border hover:bg-muted"
+                )}
+              >
+                Both
+              </button>
+            )}
           </div>
         </div>
 
@@ -432,6 +456,7 @@ export function LogExtraDialog({
                     <th className="text-right px-2 py-2 font-medium text-muted-foreground">carbs</th>
                     <th className="text-right px-2 py-2 font-medium text-muted-foreground">fat</th>
                     <th className="text-right px-2 py-2 font-medium text-muted-foreground">sugar</th>
+                    <th className="text-right px-2 py-2 font-medium text-muted-foreground">fiber</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
@@ -461,6 +486,7 @@ export function LogExtraDialog({
                       <td className="px-2 py-2 text-right tabular-nums text-amber-600 dark:text-amber-400">{Math.round(item.carbG)}g</td>
                       <td className="px-2 py-2 text-right tabular-nums text-rose-600 dark:text-rose-400">{Math.round(item.fatG)}g</td>
                       <td className="px-2 py-2 text-right tabular-nums text-pink-600 dark:text-pink-400">{Math.round(item.sugarG)}g</td>
+                      <td className="px-2 py-2 text-right tabular-nums text-green-600 dark:text-green-400">{Math.round(item.fiberG)}g</td>
                     </tr>
                   ))}
                 </tbody>
@@ -472,6 +498,7 @@ export function LogExtraDialog({
                     <td className="px-2 py-2 text-right tabular-nums text-sm text-amber-600 dark:text-amber-400">{analysis.totals.carbG}g</td>
                     <td className="px-2 py-2 text-right tabular-nums text-sm text-rose-600 dark:text-rose-400">{analysis.totals.fatG}g</td>
                     <td className="px-2 py-2 text-right tabular-nums text-sm text-pink-600 dark:text-pink-400">{analysis.totals.sugarG}g</td>
+                    <td className="px-2 py-2 text-right tabular-nums text-sm text-green-600 dark:text-green-400">{analysis.totals.fiberG}g</td>
                   </tr>
                 </tfoot>
               </table>

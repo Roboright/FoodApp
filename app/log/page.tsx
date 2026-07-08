@@ -35,6 +35,7 @@ export type ExtraLog = {
   carbOverride: number | null
   fatOverride: number | null
   sugarOverride: number | null
+  fiberOverride: number | null
 }
 
 export default function LogPage() {

@@ -13,6 +13,7 @@ export type FoodItem = {
   carbG: number
   fatG: number
   sugarG: number | null
+  fiberG: number | null
 }
 
 export type MatchedItem = {
@@ -28,6 +29,7 @@ export type MatchedItem = {
   carbG: number
   fatG: number
   sugarG: number
+  fiberG: number
 }
 
 export function fuzzyMatch(query: string, items: FoodItem[]): FoodItem | null {
@@ -64,6 +66,7 @@ const EstimateSchema = z.object({
     carbG: z.number(),
     fatG: z.number(),
     sugarG: z.number(),
+    fiberG: z.number(),
   })),
 })
 
@@ -75,6 +78,7 @@ export type NutritionTotals = {
   carbG: number
   fatG: number
   sugarG: number
+  fiberG: number
 }
 
 export async function matchAndEstimate(
@@ -101,6 +105,7 @@ export async function matchAndEstimate(
         carbG: Math.round(match.carbG * scale * 10) / 10,
         fatG: Math.round(match.fatG * scale * 10) / 10,
         sugarG: Math.round((match.sugarG ?? 0) * scale * 10) / 10,
+        fiberG: Math.round((match.fiberG ?? 0) * scale * 10) / 10,
       })
     } else {
       unmatched.push(item)
@@ -116,7 +121,7 @@ export async function matchAndEstimate(
 
     for (let i = 0; i < unmatched.length; i++) {
       const item = unmatched[i]
-      const est = estimated.items[i] ?? { calories: 0, proteinG: 0, carbG: 0, fatG: 0, sugarG: 0 }
+      const est = estimated.items[i] ?? { calories: 0, proteinG: 0, carbG: 0, fatG: 0, sugarG: 0, fiberG: 0 }
       matchedItems.push({
         name: item.name,
         quantity: item.quantity,
@@ -130,6 +135,7 @@ export async function matchAndEstimate(
         carbG: est.carbG,
         fatG: est.fatG,
         sugarG: est.sugarG,
+        fiberG: est.fiberG,
       })
     }
   }
@@ -141,8 +147,9 @@ export async function matchAndEstimate(
       carbG: acc.carbG + item.carbG,
       fatG: acc.fatG + item.fatG,
       sugarG: acc.sugarG + item.sugarG,
+      fiberG: acc.fiberG + item.fiberG,
     }),
-    { calories: 0, proteinG: 0, carbG: 0, fatG: 0, sugarG: 0 }
+    { calories: 0, proteinG: 0, carbG: 0, fatG: 0, sugarG: 0, fiberG: 0 }
   )
 
   return {
@@ -153,6 +160,7 @@ export async function matchAndEstimate(
       carbG: Math.round(totals.carbG),
       fatG: Math.round(totals.fatG),
       sugarG: Math.round(totals.sugarG),
+      fiberG: Math.round(totals.fiberG),
     },
   }
 }

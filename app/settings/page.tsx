@@ -29,6 +29,7 @@ type ProfileData = {
   activityLevel: string
   proteinCapG: number | null
   sugarTarget: number | null
+  fiberTarget: number | null
   notes: string | null
   calorieTarget: number | null
   proteinTarget: number | null
@@ -46,6 +47,7 @@ type Draft = {
   activityLevel: string
   proteinCapG: string
   sugarTarget: string
+  fiberTarget: string
   notes: string
   // Manual macro targets (calories is always derived)
   proteinTarget: string
@@ -116,6 +118,7 @@ function toDraft(p: ProfileData): Draft {
     activityLevel: p.activityLevel ?? "MODERATELY_ACTIVE",
     proteinCapG: p.proteinCapG?.toString() ?? "",
     sugarTarget: p.sugarTarget?.toString() ?? "",
+    fiberTarget: p.fiberTarget?.toString() ?? "",
     notes: p.notes ?? "",
     proteinTarget: p.proteinTarget?.toString() ?? "",
     carbTarget: p.carbTarget?.toString() ?? "",
@@ -178,6 +181,7 @@ function ProfileCard({ profile, onSaved }: { profile: ProfileData; onSaved: () =
           activityLevel: draft.activityLevel,
           proteinCapG: draft.proteinCapG ? parseInt(draft.proteinCapG) : null,
           sugarTarget: draft.sugarTarget ? parseInt(draft.sugarTarget) : null,
+          fiberTarget: draft.fiberTarget ? parseInt(draft.fiberTarget) : null,
           notes: draft.notes || null,
           ...(hasTargets ? {
             proteinTarget: Math.round(p),
@@ -265,6 +269,9 @@ function ProfileCard({ profile, onSaved }: { profile: ProfileData; onSaved: () =
             </Field>
             <Field label="Sugar limit (g)">
               <input className="input" type="number" min="0" value={draft.sugarTarget} onChange={set("sugarTarget")} placeholder="e.g. 30" />
+            </Field>
+            <Field label="Fiber target (g)">
+              <input className="input" type="number" min="0" value={draft.fiberTarget} onChange={set("fiberTarget")} placeholder="e.g. 30" />
             </Field>
           </div>
           {hasTargets && (
@@ -366,7 +373,7 @@ function FoodItemRow({
   if (editing) {
     return (
       <tr className="bg-muted/30">
-        <td className="px-3 py-2" colSpan={9}>
+        <td className="px-3 py-2" colSpan={10}>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mb-2">
             <div className="col-span-2">
               <label className="text-xs text-muted-foreground">Name</label>
@@ -422,6 +429,7 @@ function FoodItemRow({
       <td className="px-2 py-2 text-sm tabular-nums text-right text-amber-600 dark:text-amber-400">{Math.round(item.carbG)}g</td>
       <td className="px-2 py-2 text-sm tabular-nums text-right text-rose-600 dark:text-rose-400">{Math.round(item.fatG)}g</td>
       <td className="px-2 py-2 text-sm tabular-nums text-right text-pink-600 dark:text-pink-400">{item.sugarG != null ? `${Math.round(item.sugarG)}g` : "—"}</td>
+      <td className="px-2 py-2 text-sm tabular-nums text-right text-green-600 dark:text-green-400">{item.fiberG != null ? `${Math.round(item.fiberG)}g` : "—"}</td>
       <td className="px-2 py-2 text-xs text-center">
         <span className={cn(
           "inline-block rounded-full px-1.5 py-0.5",
@@ -667,6 +675,7 @@ function FoodItemsTab() {
                 <th className="text-right px-2 py-2.5 font-medium text-muted-foreground">carbs</th>
                 <th className="text-right px-2 py-2.5 font-medium text-muted-foreground">fat</th>
                 <th className="text-right px-2 py-2.5 font-medium text-muted-foreground">sugar</th>
+                <th className="text-right px-2 py-2.5 font-medium text-muted-foreground">fiber</th>
                 <th className="text-center px-2 py-2.5 font-medium text-muted-foreground">source</th>
                 <th className="w-20 px-2 py-2.5" />
               </tr>

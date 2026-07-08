@@ -6,7 +6,7 @@ import type { NutritionInfo } from "@prisma/client"
 // `servingsOverride` lets a slot record a different personal serving count
 // (e.g. "ate 1.5 portions"); `servingFraction` further scales an individual's share.
 export function scaledNutrition(
-  nutrition: Pick<NutritionInfo, "calories" | "proteinG" | "carbG" | "fatG"> & { sugarG?: number | null },
+  nutrition: Pick<NutritionInfo, "calories" | "proteinG" | "carbG" | "fatG"> & { sugarG?: number | null; fiberG?: number | null },
   recipeServings: number,
   servingsOverride: number | null,
   servingFraction: number = 1.0
@@ -19,6 +19,7 @@ export function scaledNutrition(
     carbG: nutrition.carbG * scale,
     fatG: nutrition.fatG * scale,
     sugarG: nutrition.sugarG != null ? nutrition.sugarG * scale : null,
+    fiberG: nutrition.fiberG != null ? nutrition.fiberG * scale : null,
   }
 }
 

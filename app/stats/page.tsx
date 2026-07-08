@@ -14,11 +14,13 @@ type TodayProfileStat = {
   carbG: number | null
   fatG: number | null
   sugarG: number | null
+  fiberG: number | null
   calorieTarget: number | null
   proteinTarget: number | null
   carbTarget: number | null
   fatTarget: number | null
   sugarTarget: number | null
+  fiberTarget: number | null
 }
 
 type ProfileStat = {
@@ -32,11 +34,13 @@ type ProfileStat = {
   avgCarbG: number | null
   avgFatG: number | null
   avgSugarG: number | null
+  avgFiberG: number | null
   calorieTarget: number | null
   proteinTarget: number | null
   carbTarget: number | null
   fatTarget: number | null
   sugarTarget: number | null
+  fiberTarget: number | null
 }
 
 type WeekStat = {
@@ -156,6 +160,7 @@ function TodayPanel({ stat }: { stat: TodayProfileStat }) {
           <NutritionRow label="Carbs"    value={stat.carbG}     target={stat.carbTarget}    unit="g" />
           <NutritionRow label="Fat"      value={stat.fatG}      target={stat.fatTarget}     unit="g" />
           <NutritionRow label="Sugar"    value={stat.sugarG}    target={stat.sugarTarget}   unit="g" isCap />
+          <NutritionRow label="Fiber"    value={stat.fiberG}    target={stat.fiberTarget}   unit="g" isMin />
         </div>
       ) : (
         <p className="text-xs text-muted-foreground">No meals planned or logged today.</p>
@@ -193,6 +198,7 @@ function ProfilePanel({ stat }: { stat: ProfileStat }) {
           <NutritionRow label="Carbs"    value={stat.avgCarbG}    target={stat.carbTarget}    unit="g" />
           <NutritionRow label="Fat"      value={stat.avgFatG}     target={stat.fatTarget}     unit="g" />
           <NutritionRow label="Sugar"    value={stat.avgSugarG}   target={stat.sugarTarget}   unit="g" isCap />
+          <NutritionRow label="Fiber"    value={stat.avgFiberG}   target={stat.fiberTarget}   unit="g" isMin />
         </div>
       ) : (
         <p className="text-xs text-muted-foreground">No meals planned this week.</p>
@@ -214,31 +220,16 @@ function NutritionRow({
   const pct = value !== null && target ? Math.round((value / target) * 100) : null
   const barPct = value !== null && target ? Math.min((value / target) * 100, 100) : 0
 
-  const barColor = (() => {
-    if (pct === null) return "bg-muted-foreground/30"
-    if (isCap) {
-      if (pct <= 85) return "bg-emerald-500"
-      if (pct <= 100) return "bg-amber-400"
-      return "bg-rose-500"
-    }
-    if (isMin) {
-      if (pct >= 95) return "bg-emerald-500"
-      if (pct >= 75) return "bg-amber-400"
-      return "bg-rose-500"
-    }
-    if (pct >= 85 && pct <= 115) return "bg-emerald-500"
-    if (pct >= 70) return "bg-amber-400"
-    return "bg-rose-500"
+  const colorClass = (() => {
+    if (pct === null) return { bar: "bg-muted-foreground/30", text: "text-muted-foreground" }
+    if (pct < 80)  return { bar: "bg-yellow-400",  text: "text-yellow-600 dark:text-yellow-400" }
+    if (pct <= 100) return { bar: "bg-emerald-500", text: "text-emerald-600 dark:text-emerald-400" }
+    if (pct <= 120) return { bar: "bg-orange-400",  text: "text-orange-600 dark:text-orange-400" }
+    return             { bar: "bg-rose-500",    text: "text-rose-600 dark:text-rose-400" }
   })()
 
   const pctLabel = pct !== null ? (
-    <span className={cn(
-      "text-xs tabular-nums font-medium",
-      isCap && pct > 100 ? "text-rose-500" :
-      isMin && pct < 75 ? "text-rose-500" :
-      pct < 70 ? "text-rose-500" :
-      "text-muted-foreground"
-    )}>
+    <span className={cn("text-xs tabular-nums font-medium", colorClass.text)}>
       {pct}%
     </span>
   ) : null
@@ -266,7 +257,7 @@ function NutritionRow({
       {target && value !== null && (
         <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
           <div
-            className={cn("h-full rounded-full transition-all", barColor)}
+            className={cn("h-full rounded-full transition-all", colorClass.bar)}
             style={{ width: `${barPct}%` }}
           />
         </div>
